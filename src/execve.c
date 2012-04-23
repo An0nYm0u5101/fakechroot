@@ -203,6 +203,7 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
             return nextcall(execve)(filename, argv, newenvp);
         newargv[0] = elfloader;
         ptr = argv0;
+        /*
         if( argv[0][0] != '/' ) {
             if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 2) != NULL) {
                 strncat(fakechroot_buf, "/", FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
@@ -210,7 +211,8 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
                 ptr = fakechroot_buf;
             }
         } else
-            expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
+        */
+        expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
         strcpy(newfilename, ptr);
         newargv[1] = newfilename;
         for (i = 1; argv[i] != NULL && i<argv_max; i++)
