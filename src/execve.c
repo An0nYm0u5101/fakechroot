@@ -97,12 +97,14 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
         "FAKECHROOT_CMD_SUBST",
         "FAKECHROOT_DEBUG",
         "FAKECHROOT_DETECT",
+        "FAKECHROOT_ELFLOADER",
         "FAKECHROOT_EXCLUDE_PATH",
         "FAKECHROOT_VERSION",
         "LD_LIBRARY_PATH",
         "LD_PRELOAD"
     };
     const int nr_envkey = sizeof envkey / sizeof envkey[0];
+    char * elfloader = getenv("FAKECHROOT_ELFLOADER");
 
     debug("execve(\"%s\", {\"%s\", ...}, {\"%s\", ...})", filename, argv[0], envp[0]);
 
@@ -195,8 +197,14 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
     }
 
     /* No hashbang in argv */
-    if (hashbang[0] != '#' || hashbang[1] != '!')
-        return nextcall(execve)(filename, argv, newenvp);
+    if (hashbang[0] != '#' || hashbang[1] != '!') {
+        if (!elfloader)
+            return nextcall(execve)(filename, argv, newenvp);
+        newargv[0] = elfloader;
+        for (i = 0; argv[i] != NULL && i<argv_max; i++)
+            newargv[i+1] = argv[i];
+        return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
+    }
 
     /* For hashbang we must fix argv[0] */
     hashbang[i] = hashbang[i+1] = 0;
@@ -227,5 +235,13 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
 
     newargv[n] = 0;
 
-    return nextcall(execve)(newfilename, (char * const *)newargv, newenvp);
+    if (!elfloader)
+        return nextcall(execve)(newfilename, (char * const *)newargv, newenvp);
+    if (n >= argv_max - 1)
+        n = argv_max - 2;
+    newargv[n+1] = 0;
+    for (i = n; i >= 1; i--)
+        newargv[i] = newargv[i-1];
+    newargv[0] = elfloader;
+    return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
 }
