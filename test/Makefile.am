@@ -1,6 +1,8 @@
 SUBDIRS = src
 
-TESTS = \
+TESTS = t/dummy.t
+
+TESTS_DISABLED = \
     t/00echo.t \
     t/canonicalize_file_name.t \
     t/chdir.t \
