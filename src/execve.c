@@ -204,8 +204,9 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
         newargv[0] = elfloader;
         ptr = argv[0];
         if( argv[0][0] != '/' ) {
-            if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 1) != NULL) {
-                strncat(fakechroot_buf, argv[0], FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 1);
+            if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 2) != NULL) {
+                strncat(fakechroot_buf, "/", FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
+                strncat(fakechroot_buf, argv[0], FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
                 ptr = fakechroot_buf;
             }
         } else
