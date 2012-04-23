@@ -202,7 +202,7 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
         if (!elfloader)
             return nextcall(execve)(filename, argv, newenvp);
         newargv[0] = elfloader;
-        ptr = argv[0];
+        ptr = argv0;
         if( argv[0][0] != '/' ) {
             if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 2) != NULL) {
                 strncat(fakechroot_buf, "/", FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
