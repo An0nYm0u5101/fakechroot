@@ -201,7 +201,11 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
         if (!elfloader)
             return nextcall(execve)(filename, argv, newenvp);
         newargv[0] = elfloader;
-        for (i = 0; argv[i] != NULL && i<argv_max; i++)
+        ptr = argv[0];
+        expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
+        strcpy(newfilename, ptr);
+        newargv[1] = newfilename;
+        for (i = 1; argv[i] != NULL && i<argv_max; i++)
             newargv[i+1] = argv[i];
         return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
     }
