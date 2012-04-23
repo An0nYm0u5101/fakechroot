@@ -32,6 +32,7 @@
 #include "libfakechroot.h"
 #include "open.h"
 #include "unsetenv.h"
+#include "getcwd.h"
 
 
 /* Parse the FAKECHROOT_CMD_SUBST environment variable (the first
@@ -202,11 +203,18 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
             return nextcall(execve)(filename, argv, newenvp);
         newargv[0] = elfloader;
         ptr = argv[0];
-        expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
+        if( argv[0][0] != '/' ) {
+            if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 1) != NULL) {
+                strncat(fakechroot_buf, argv[0], FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 1);
+                ptr = fakechroot_buf;
+            }
+        } else
+            expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
         strcpy(newfilename, ptr);
         newargv[1] = newfilename;
         for (i = 1; argv[i] != NULL && i<argv_max; i++)
             newargv[i+1] = argv[i];
+        debug("execve(\"%s\", {\"%s\", \"%s\", ...}, {\"%s\", ...})", elfloader, newargv[0], newargv[1], envp[0]);
         return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
     }
 
