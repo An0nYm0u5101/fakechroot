@@ -33,6 +33,7 @@
 #include "open.h"
 #include "unsetenv.h"
 #include "getcwd.h"
+#include "readlink.h"
 
 
 /* Parse the FAKECHROOT_CMD_SUBST environment variable (the first
@@ -106,6 +107,7 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
     };
     const int nr_envkey = sizeof envkey / sizeof envkey[0];
     char * elfloader = getenv("FAKECHROOT_ELFLOADER");
+    /* READLINK_TYPE_ARG3(linksize); */
 
     debug("execve(\"%s\", {\"%s\", ...}, {\"%s\", ...})", filename, argv[0], envp[0]);
 
@@ -185,6 +187,26 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
     strcpy(tmp, filename);
     filename = tmp;
 
+    /* Dereference layers of symlinks that Debian happily places in place of binaries using it's 'alternatives' cmd */
+    /*
+    while(1) {
+        debug("nextcall(readlink)(\"%s\")", filename);
+        linksize = nextcall(readlink)(filename, fakechroot_buf, sizeof(fakechroot_buf)-1);
+        debug("nextcall(readlink)(\"%s\") = %d", filename, linksize);
+        if ((int)linksize <= 0) {
+            debug("nextcall(readlink)(\"%s\") - break!", filename);
+            break;
+        }
+        fakechroot_buf[linksize] = 0;
+        debug("nextcall(readlink)(\"%s\") = '%s'", filename, fakechroot_buf);
+        strcpy(tmp, fakechroot_buf);
+
+        expand_chroot_path(filename, fakechroot_path, fakechroot_buf);
+        strcpy(tmp, filename);
+        filename = tmp;
+    }
+    */
+
     if ((file = nextcall(open)(filename, O_RDONLY)) == -1) {
         __set_errno(ENOENT);
         return -1;
@@ -203,21 +225,12 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
             return nextcall(execve)(filename, argv, newenvp);
         newargv[0] = elfloader;
         ptr = argv0;
-        /*
-        if( argv[0][0] != '/' ) {
-            if (nextcall(getcwd)(fakechroot_buf, sizeof(fakechroot_buf) - 2) != NULL) {
-                strncat(fakechroot_buf, "/", FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
-                strncat(fakechroot_buf, argv[0], FAKECHROOT_PATH_MAX - strlen(fakechroot_buf) - 2);
-                ptr = fakechroot_buf;
-            }
-        } else
-        */
         expand_chroot_path(ptr, fakechroot_path, fakechroot_buf);
         strcpy(newfilename, ptr);
         newargv[1] = newfilename;
         for (i = 1; argv[i] != NULL && i<argv_max; i++)
             newargv[i+1] = argv[i];
-        debug("execve(\"%s\", {\"%s\", \"%s\", ...}, {\"%s\", ...})", elfloader, newargv[0], newargv[1], envp[0]);
+        debug("nextcall(execve)(\"%s\", {\"%s\", \"%s\", ...}, {\"%s\", ...})", elfloader, newargv[0], newargv[1], newenvp[0]);
         return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
     }
 
@@ -258,5 +271,7 @@ wrapper(execve, int, (const char * filename, char * const argv [], char * const 
     for (i = n; i >= 1; i--)
         newargv[i] = newargv[i-1];
     newargv[0] = elfloader;
+    newargv[1] = newfilename;
+    debug("nextcall(execve)(\"%s\", {\"%s\", \"%s\", \"%s\", ...}, {\"%s\", ...})", elfloader, newargv[0], newargv[1], newargv[2], newenvp[0]);
     return nextcall(execve)(elfloader, (char * const *)newargv, newenvp);
 }
