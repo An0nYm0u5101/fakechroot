@@ -46,3 +46,5 @@ test/rinse-cache
 test/src/test-*
 !test/src/test-*.c
 test/testtree
+compile
+test-driver
